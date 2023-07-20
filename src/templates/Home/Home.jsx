@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { getPosts } from '../../utils/get-posts';
 import Posts from '../../components/Posts/Posts';
 import Button from '../../components/Button/Button';
@@ -6,83 +6,69 @@ import Input from '../../components/Input/Input';
 
 import './Home.css';
 
-class Home extends Component {
+function Home() {
 
-  state = {
-    posts: [],
-    allPosts: [],
-    page: 0,
-    postsPerPage: 6,
-    inputValue: ''
-  };
+  const [posts, setPosts] = useState([]);
+  const [allPosts, setAllPosts] = useState([]);
+  const [page, setPage] = useState(0);
+  const [postsPerPage] = useState(6);
+  const [inputValue, setInputValue] = useState('');
 
-  async componentDidMount() {
-    await this.getPosts();
-  }
-
-  getPosts = async () => {
-    const {page, postsPerPage } = this.state;
-
+  const handleGetPosts = useCallback(async (page, postsPerPage) => {
     const postsWithPhotos = await getPosts();
-    this.setState({ 
-      posts: postsWithPhotos.slice(page, postsPerPage), // 6
-      allPosts: postsWithPhotos 
-    });
-  }
 
-  handleGetMorePost = () => {
-    const {
-      page,
-      postsPerPage,
-      allPosts,
-      posts
-    } = this.state;
+    setPosts(postsWithPhotos.slice(page, postsPerPage));
+    setAllPosts(postsWithPhotos);
+  }, [])
 
-    const nextPage = page + postsPerPage; 
+  const handleGetMorePost = () => {
+    const nextPage = page + postsPerPage;
     const nextPosts = allPosts.slice(nextPage, nextPage + postsPerPage);
-    posts.push(...nextPosts); 
+    posts.push(...nextPosts);
 
-    this.setState({ posts, page: nextPage });
+    setPosts(posts);
+    setPage(nextPage);
   }
 
-  handleChange = (e) => {
+  const handleChange = (e) => {
     const { value } = e.target;
-    this.setState({ inputValue: value});
+    setInputValue(value);
   }
 
-  render() {
-    const { posts, page, postsPerPage, allPosts, inputValue } = this.state;
-    const noMorePosts = page + postsPerPage >= allPosts.length;
+  useEffect(() => {
+    handleGetPosts(0, postsPerPage);
+  }, [handleGetPosts, postsPerPage]);
 
-    const filteredPosts = inputValue ? allPosts.filter(post => {
-      return post.title.toLowerCase().includes(inputValue.toLowerCase());
-    }): posts;
+  const noMorePosts = page + postsPerPage >= allPosts.length;
 
-    return (
-      <>
-        <section className='container'>
-          <div className='search-container'>
-            <Input inputValue={inputValue} handleChange={this.handleChange}/>
-          </div>
-          { filteredPosts.length > 0 && (
-            <Posts posts={filteredPosts}/>
-          ) }
-          { filteredPosts.length === 0 && (
-            <p>Não existem posts !</p>
-          ) }
-          <div className='button-area'>
-            { !inputValue && (
-              <Button 
-               text="Load more posts" 
-               getPosts={this.handleGetMorePost}
-               disabled={noMorePosts}
-             />
-            ) }
-          </div>
-        </section>
-      </>
-    )
-  }
+  const filteredPosts = inputValue ? allPosts.filter(post => {
+    return post.title.toLowerCase().includes(inputValue.toLowerCase());
+  }) : posts;
+
+  return (
+    <>
+      <section className='container'>
+        <div className='search-container'>
+          <Input inputValue={inputValue} handleChange={handleChange} />
+        </div>
+        {filteredPosts.length > 0 && (
+          <Posts posts={filteredPosts} />
+        )}
+        {filteredPosts.length === 0 && (
+          <p>Não existem posts !</p>
+        )}
+        <div className='button-area'>
+          {!inputValue && (
+            <Button
+              text="Load more posts"
+              getPosts={handleGetMorePost}
+              disabled={noMorePosts}
+            />
+          )}
+        </div>
+      </section>
+    </>
+  );
 }
 
 export default Home;
